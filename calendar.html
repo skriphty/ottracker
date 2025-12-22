@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Calendar View</title>
+    <meta charset="UTF-8">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #121212;
+            color: #e0e0e0;
+        }
+
+        /* ------------------------------
+           TOP NAV MENU
+        ------------------------------ */
+        #topMenu {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 20px;
+        }
+
+        #topMenu a {
+            color: #b0b0b0;
+            text-decoration: none;
+            margin: 0 20px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+
+        #topMenu a:hover {
+            background: #1f1f1f;
+            color: #ffffff;
+        }
+
+        #topMenu .active {
+            background: #2a2a2a;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        /* ------------------------------
+           CALENDAR CONTAINER
+        ------------------------------ */
+        #calendarContainer {
+            width: 1000px;
+            margin: 0 auto;
+        }
+
+        #monthTitle {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        /* ------------------------------
+           CALENDAR GRID
+        ------------------------------ */
+        #calendarGrid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .dayHeader {
+            text-align: center;
+            font-weight: bold;
+            padding: 10px 0;
+            background: #1f1f1f;
+            border-radius: 6px;
+        }
+
+        .dayCell {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 10px;
+            min-height: 90px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-start;
+            font-size: 18px;
+        }
+
+        .dayNumber {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #ffffff;
+        }
+
+        .hoursText {
+            font-size: 18px;
+            color: #e8d63a;
+        }
+    </style>
+</head>
+<body>
+
+<!-- TOP NAVIGATION MENU -->
+<div id="topMenu">
+    <a href="index.html">Time Log</a>
+    <a href="calendar.html" class="active">Calendar</a>
+</div>
+
+<div id="calendarContainer">
+    <div id="monthTitle">Loading…</div>
+
+    <div id="calendarGrid">
+        <!-- Headers -->
+        <div class="dayHeader">Mon</div>
+        <div class="dayHeader">Tue</div>
+        <div class="dayHeader">Wed</div>
+        <div class="dayHeader">Thu</div>
+        <div class="dayHeader">Fri</div>
+        <div class="dayHeader">Sat</div>
+        <div class="dayHeader">Sun</div>
+    </div>
+</div>
+
+<script>
+/* ----------------------------------------
+   LOAD LOGS FROM LOCALSTORAGE
+---------------------------------------- */
+let logs = JSON.parse(localStorage.getItem("timeLogs") || "[]");
+
+/* ----------------------------------------
+   GET CURRENT MONTH INFO
+---------------------------------------- */
+const now = new Date();
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth(); // 0–11
+
+// First day of the month
+const firstDay = new Date(currentYear, currentMonth, 1);
+
+// Number of days in this month
+const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+/* ----------------------------------------
+   MONTH TITLE
+---------------------------------------- */
+const monthNames = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+];
+
+document.getElementById("monthTitle").textContent =
+    monthNames[currentMonth] + " " + currentYear;
+
+/* ----------------------------------------
+   CALCULATE OFFSET FOR MONDAY-START
+---------------------------------------- */
+let startOffset = firstDay.getDay(); // 0=Sun, 1=Mon, ...
+if (startOffset === 0) startOffset = 7; // Sunday becomes 7
+startOffset = startOffset - 1; // Convert so Monday=0
+
+/* ----------------------------------------
+   SUM HOURS PER DAY
+---------------------------------------- */
+let hoursByDay = {};
+
+logs.forEach(entry => {
+    if (entry.action !== "Clock Out") return;
+
+    // entry.date is DD/MM/YYYY
+    const [d, m, y] = entry.date.split("/").map(Number);
+
+    if (m - 1 === currentMonth && y === currentYear) {
+        const day = d;
+        const hours = parseFloat(entry.hours || "0");
+
+        if (!hoursByDay[day]) hoursByDay[day] = 0;
+        hoursByDay[day] += hours;
+    }
+});
+
+/* ----------------------------------------
+   RENDER CALENDAR
+---------------------------------------- */
+const grid = document.getElementById("calendarGrid");
+
+// Add blank cells before day 1
+for (let i = 0; i < startOffset; i++) {
+    const empty = document.createElement("div");
+    empty.className = "dayCell";
+    grid.appendChild(empty);
+}
+
+// Add actual days
+for (let day = 1; day <= daysInMonth; day++) {
+    const cell = document.createElement("div");
+    cell.className = "dayCell";
+
+    const num = document.createElement("div");
+    num.className = "dayNumber";
+    num.textContent = day;
+
+    cell.appendChild(num);
+
+    if (hoursByDay[day]) {
+        const hrs = document.createElement("div");
+        hrs.className = "hoursText";
+        hrs.textContent = hoursByDay[day].toFixed(2) + "h";
+        cell.appendChild(hrs);
+    }
+
+    grid.appendChild(cell);
+}
+
+</script>
+
+</body>
+</html>
