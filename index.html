@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Time Tracker</title>
+    <meta charset="UTF-8">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,6 +16,7 @@
             color: #ffffff;
         }
 
+        /* Live clock */
         #liveClock {
             text-align: center;
             font-size: 32px;
@@ -22,6 +24,7 @@
             color: #b0b0b0;
         }
 
+        /* Status text */
         #statusText {
             text-align: center;
             font-size: 22px;
@@ -29,6 +32,7 @@
             color: #e8d63a;
         }
 
+        /* Reset button */
         #resetBtn {
             position: absolute;
             top: 20px;
@@ -40,8 +44,11 @@
             border: none;
             border-radius: 6px;
             cursor: pointer;
+            transition: 0.2s;
         }
+        #resetBtn:hover { background: #3a3a3a; }
 
+        /* Download button (top right) */
         #downloadBtn {
             position: absolute;
             top: 20px;
@@ -53,8 +60,11 @@
             font-size: 18px;
             border: none;
             cursor: pointer;
+            transition: 0.2s;
         }
+        #downloadBtn:hover { background: #3a3a3a; }
 
+        /* Button container */
         .button-container {
             display: flex;
             justify-content: center;
@@ -62,6 +72,7 @@
             margin-top: 20px;
         }
 
+        /* Main buttons */
         button {
             padding: 30px 50px;
             font-size: 24px;
@@ -71,6 +82,7 @@
             transition: all 0.3s ease;
         }
 
+        /* Clock In (yellow) */
         #clockInBtn {
             background: #d4c21f;
             color: black;
@@ -80,6 +92,7 @@
             transform: scale(1.05);
         }
 
+        /* Clock Out (blue) */
         #clockOutBtn {
             background: #1f4fd4;
             color: white;
@@ -89,13 +102,20 @@
             transform: scale(1.05);
         }
 
-        .disabledBtn {
-            background: #000 !important;
-            color: #666 !important;
-            cursor: not-allowed !important;
-            opacity: 0.6;
+        button:active:not(.disabledBtn) {
+            transform: scale(0.95);
         }
 
+        /* Disabled state */
+        .disabledBtn {
+            background: #000000 !important;
+            color: #666666 !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+            transform: none !important;
+        }
+
+        /* Tooltip */
         .tooltip {
             position: relative;
         }
@@ -111,9 +131,11 @@
             border-radius: 6px;
             font-size: 14px;
             white-space: nowrap;
-            opacity: 0.9;
+            opacity: 0.95;
+            pointer-events: none;
         }
 
+        /* Table container */
         #scrollArea {
             max-height: 650px;
             overflow-y: auto;
@@ -137,14 +159,21 @@
 
         td.actionCell { width: 40px; }
 
+        /* Delete button */
         .deleteBtn {
             background: none;
             border: none;
             color: #ff5555;
             font-size: 20px;
             cursor: pointer;
+            transition: 0.2s;
+        }
+        .deleteBtn:hover {
+            color: #ff7777;
+            transform: scale(1.2);
         }
 
+        /* Edit button */
         .editBtn {
             background: none;
             border: none;
@@ -152,11 +181,18 @@
             font-size: 20px;
             cursor: pointer;
             margin-right: 5px;
+            transition: 0.2s;
+        }
+        .editBtn:hover {
+            color: #77bbff;
+            transform: scale(1.2);
         }
 
+        /* Alternating day colors */
         .dayA { background: #1a1a1a; }
         .dayB { background: #222222; }
 
+        /* Action colors */
         .action-in {
             color: #e8d63a;
             font-weight: bold;
@@ -166,14 +202,16 @@
             font-weight: bold;
         }
 
+        /* Edited row animation */
         .edited {
             animation: glow 1.5s ease;
         }
         @keyframes glow {
-            0% { background-color: #444; }
+            0% { background-color: #444444; }
             100% { background-color: inherit; }
         }
 
+        /* Modal overlay */
         #modalOverlay {
             position: fixed;
             top: 0; left: 0;
@@ -184,6 +222,7 @@
             align-items: center;
         }
 
+        /* Modal box */
         #editModal {
             background: #1e1e1e;
             padding: 25px;
@@ -241,6 +280,7 @@
     </table>
 </div>
 
+<!-- Modal -->
 <div id="modalOverlay">
     <div id="editModal">
         <h3>Edit Entry</h3>
@@ -253,153 +293,242 @@
 </div>
 
 <script>
-let logs = JSON.parse(localStorage.getItem("timeLogs") || "[]");
-let editingId = null;
+    let logs = JSON.parse(localStorage.getItem("timeLogs") || "[]");
+    let editingId = null;
 
-/* Live Clock */
-setInterval(() => {
-    document.getElementById("liveClock").textContent =
-        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}, 1000);
+    /* Live clock */
+    function updateClock() {
+        document.getElementById("liveClock").textContent =
+            new Date().toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
 
-/* SHIFT CALCULATION (strict pairing) */
-function calculateShifts() {
-    let shift = 0;
-    let lastIn = null;
+    /* Strict pairing shift calculation */
+    function calculateShifts() {
+        let shift = 0;
+        let lastIn = null;
 
-    // oldest → newest
-    const chronological = [...logs].sort((a, b) => a.timestamp - b.timestamp);
+        // Work oldest → newest
+        const chronological = [...logs].sort((a, b) => a.timestamp - b.timestamp);
 
-    chronological.forEach(entry => {
-        entry.shift = ""; // reset
+        chronological.forEach(entry => {
+            entry.shift = "";
+        });
 
-        if (entry.action === "Clock In") {
-            lastIn = entry;
-        } else if (entry.action === "Clock Out" && lastIn) {
-            shift++;
-            lastIn.shift = shift;
-            entry.shift = shift;
-            lastIn = null;
+        chronological.forEach(entry => {
+            if (entry.action === "Clock In") {
+                lastIn = entry;
+            } else if (entry.action === "Clock Out" && lastIn) {
+                shift++;
+                lastIn.shift = shift;
+                entry.shift = shift;
+                lastIn = null;
+            }
+        });
+
+        // Copy back shift values to main (newest-first) logs
+        logs.forEach(entry => {
+            const match = chronological.find(c => c.id === entry.id);
+            entry.shift = match.shift;
+        });
+    }
+
+    /* Update button states + status text */
+    function updateButtons() {
+        const last = logs[0] ? logs[0].action : null;
+
+        const inBtn = document.getElementById("clockInBtn");
+        const outBtn = document.getElementById("clockOutBtn");
+        const status = document.getElementById("statusText");
+
+        // Reset to enabled, no tooltip
+        inBtn.disabled = false;
+        outBtn.disabled = false;
+        inBtn.classList.remove("disabledBtn");
+        outBtn.classList.remove("disabledBtn");
+        inBtn.removeAttribute("data-tip");
+        outBtn.removeAttribute("data-tip");
+
+        if (!last) {
+            status.textContent = "Status: No entries yet";
+            return;
         }
-    });
 
-    // newest-first list gets updated shift numbers
-    logs.forEach(entry => {
-        const match = chronological.find(c => c.id === entry.id);
-        entry.shift = match.shift;
-    });
-}
-
-/* Update button states */
-function updateButtons() {
-    const last = logs[0] ? logs[0].action : null;
-
-    const inBtn = document.getElementById("clockInBtn");
-    const outBtn = document.getElementById("clockOutBtn");
-
-    inBtn.disabled = false;
-    outBtn.disabled = false;
-    inBtn.classList.remove("disabledBtn");
-    outBtn.classList.remove("disabledBtn");
-
-    inBtn.removeAttribute("data-tip");
-    outBtn.removeAttribute("data-tip");
-
-    if (last === "Clock In") {
-        inBtn.disabled = true;
-        inBtn.classList.add("disabledBtn");
-        inBtn.setAttribute("data-tip", "You must clock out before clocking in again");
-        document.getElementById("statusText").textContent = "Status: You are currently clocked in";
-    } else if (last === "Clock Out") {
-        outBtn.disabled = true;
-        outBtn.classList.add("disabledBtn");
-        outBtn.setAttribute("data-tip", "You must clock in before clocking out again");
-        document.getElementById("statusText").textContent = "Status: You are currently clocked out";
-    } else {
-        document.getElementById("statusText").textContent = "Status: No entries yet";
+        if (last === "Clock In") {
+            inBtn.disabled = true;
+            inBtn.classList.add("disabledBtn");
+            inBtn.setAttribute("data-tip", "You must clock out before clocking in again");
+            status.textContent = "Status: You are currently clocked in";
+        } else if (last === "Clock Out") {
+            outBtn.disabled = true;
+            outBtn.classList.add("disabledBtn");
+            outBtn.setAttribute("data-tip", "You must clock in before clocking out again");
+            status.textContent = "Status: You are currently clocked out";
+        }
     }
-}
 
-/* Record Entry */
-function record(action) {
-    const last = logs[0] ? logs[0].action : null;
-    if (action === last) return;
+    /* Record entry with no-repeat rule */
+    function record(action) {
+        const last = logs[0] ? logs[0].action : null;
+        if (action === last) {
+            return; // block repeats
+        }
 
-    const now = new Date();
-    logs.unshift({
-        id: crypto.randomUUID(),
-        action,
-        date: now.toLocaleDateString(),
-        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        timestamp: now.getTime(),
-        shift: ""
-    });
+        const now = new Date();
+        logs.unshift({
+            id: crypto.randomUUID(),
+            action,
+            date: now.toLocaleDateString(),
+            time: now.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit'
+            }),
+            timestamp: now.getTime(),
+            shift: ""
+        });
 
+        calculateShifts();
+        localStorage.setItem("timeLogs", JSON.stringify(logs));
+        renderTable();
+    }
+
+    /* Open modal for editing */
+    function editEntry(id) {
+        editingId = id;
+        const entry = logs.find(e => e.id === id);
+        if (!entry) return;
+
+        document.getElementById("editDate").value = entry.date;
+        document.getElementById("editTime").value = entry.time;
+        document.getElementById("errorMsg").textContent = "";
+
+        document.getElementById("modalOverlay").style.display = "flex";
+    }
+
+    function closeModal() {
+        document.getElementById("modalOverlay").style.display = "none";
+    }
+
+    /* Save edit with validation, then recalc shifts */
+    function saveEdit() {
+        const date = document.getElementById("editDate").value;
+        const time = document.getElementById("editTime").value;
+        const errorElem = document.getElementById("errorMsg");
+
+        const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+        const timeRegex = /^\d{2}:\d{2}$/;
+
+        if (!dateRegex.test(date)) {
+            errorElem.textContent = "Invalid date format";
+            return;
+        }
+        if (!timeRegex.test(time)) {
+            errorElem.textContent = "Invalid time format";
+            return;
+        }
+
+        const entry = logs.find(e => e.id === editingId);
+        if (!entry) return;
+
+        entry.date = date;
+        entry.time = time;
+
+        const dt = new Date(date + " " + time);
+        entry.timestamp = dt.getTime();
+
+        // Re-sort newest first
+        logs.sort((a, b) => b.timestamp - a.timestamp);
+
+        calculateShifts();
+        localStorage.setItem("timeLogs", JSON.stringify(logs));
+
+        closeModal();
+        renderTable(true, editingId);
+    }
+
+    /* Delete a single entry */
+    function deleteEntry(id) {
+        logs = logs.filter(e => e.id !== id);
+        calculateShifts();
+        localStorage.setItem("timeLogs", JSON.stringify(logs));
+        renderTable();
+    }
+
+    /* Render the table */
+    function renderTable(animate = false, editedId = null) {
+        const tbody = document.querySelector("#logTable tbody");
+        tbody.innerHTML = "";
+
+        let lastDate = "";
+        let toggle = false;
+
+        logs.forEach(row => {
+            if (row.date !== lastDate) {
+                toggle = !toggle;
+                lastDate = row.date;
+            }
+
+            const tr = document.createElement("tr");
+            tr.className = toggle ? "dayA" : "dayB";
+
+            if (animate && row.id === editedId) {
+                tr.classList.add("edited");
+            }
+
+            tr.innerHTML = `
+                <td>${row.shift || ""}</td>
+                <td class="${row.action === 'Clock In' ? 'action-in' : 'action-out'}">${row.action}</td>
+                <td>${row.date}</td>
+                <td>${row.time}</td>
+                <td class="actionCell"><button class="editBtn" onclick="editEntry('${row.id}')">✏️</button></td>
+                <td class="actionCell"><button class="deleteBtn" onclick="deleteEntry('${row.id}')">🗑️</button></td>
+            `;
+
+            tbody.appendChild(tr);
+        });
+
+        updateButtons();
+    }
+
+    /* Download CSV (including shift) */
+    function downloadCSV() {
+        let csv = "Shift,Action,Date,Time\n";
+        logs.forEach(row => {
+            csv += `${row.shift || ""},${row.action},${row.date},${row.time}\n`;
+        });
+
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "time_log.csv";
+        a.click();
+
+        URL.revokeObjectURL(url);
+    }
+
+    /* Reset all data */
+    function confirmReset() {
+        if (!confirm("Are you sure you want to delete ALL data?")) return;
+
+        logs = [];
+        localStorage.removeItem("timeLogs");
+        renderTable();
+        alert("All data has been reset.");
+    }
+
+    /* Initial render */
     calculateShifts();
-    localStorage.setItem("timeLogs", JSON.stringify(logs));
-    renderTable();
-}
-
-/* Edit Entry */
-function editEntry(id) {
-    editingId = id;
-    const entry = logs.find(e => e.id === id);
-
-    document.getElementById("editDate").value = entry.date;
-    document.getElementById("editTime").value = entry.time;
-    document.getElementById("errorMsg").textContent = "";
-
-    document.getElementById("modalOverlay").style.display = "flex";
-}
-
-function closeModal() {
-    document.getElementById("modalOverlay").style.display = "none";
-}
-
-function saveEdit() {
-    const date = document.getElementById("editDate").value;
-    const time = document.getElementById("editTime").value;
-
-    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-    const timeRegex = /^\d{2}:\d{2}$/;
-
-    if (!dateRegex.test(date)) {
-        document.getElementById("errorMsg").textContent = "Invalid date format";
-        return;
-    }
-    if (!timeRegex.test(time)) {
-        document.getElementById("errorMsg").textContent = "Invalid time format";
-        return;
-    }
-
-    const entry = logs.find(e => e.id === editingId);
-    entry.date = date;
-    entry.time = time;
-    entry.timestamp = new Date(`${date} ${time}`).getTime();
-
+    // Ensure newest-first order on load
     logs.sort((a, b) => b.timestamp - a.timestamp);
-
-    calculateShifts();
-    localStorage.setItem("timeLogs", JSON.stringify(logs));
-    closeModal();
-    renderTable(true, editingId);
-}
-
-/* Delete Entry */
-function deleteEntry(id) {
-    logs = logs.filter(e => e.id !== id);
-    calculateShifts();
-    localStorage.setItem("timeLogs", JSON.stringify(logs));
     renderTable();
-}
+</script>
 
-/* Render Table */
-function renderTable(animate = false, editedId = null) {
-    const tbody = document.querySelector("#logTable tbody");
-    tbody.innerHTML = "";
-
-    let lastDate = "";
-    let toggle = false;
-
-    logs.forEach(row => {
-        if (row.date !== lastDate)
+</body>
+</html>
