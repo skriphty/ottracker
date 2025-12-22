@@ -19,8 +19,16 @@
         #liveClock {
             text-align: center;
             font-size: 32px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             color: #b0b0b0;
+        }
+
+        /* Current status */
+        #statusText {
+            text-align: center;
+            font-size: 22px;
+            margin-bottom: 20px;
+            color: #e8d63a;
         }
 
         /* Reset button */
@@ -69,7 +77,7 @@
             cursor: pointer;
             border: none;
             border-radius: 10px;
-            transition: transform 0.15s ease, background 0.2s;
+            transition: all 0.3s ease;
         }
 
         /* Yellow / Blue buttons */
@@ -77,7 +85,7 @@
             background: #d4c21f;
             color: black;
         }
-        #clockInBtn:hover {
+        #clockInBtn:hover:not(.disabledBtn) {
             background: #e8d63a;
             transform: scale(1.05);
         }
@@ -86,12 +94,37 @@
             background: #1f4fd4;
             color: white;
         }
-        #clockOutBtn:hover {
+        #clockOutBtn:hover:not(.disabledBtn) {
             background: #3a6af0;
             transform: scale(1.05);
         }
 
-        button:active { transform: scale(0.95); }
+        /* Disabled button style */
+        .disabledBtn {
+            background: #000 !important;
+            color: #666 !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+        }
+        .tooltip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #000;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            white-space: nowrap;
+            opacity: 0.9;
+        }
 
         /* Scrollable table */
         #scrollArea {
@@ -230,10 +263,11 @@
 <h1>Time Tracker</h1>
 
 <div id="liveClock">--:--:--</div>
+<div id="statusText">Status: No entries yet</div>
 
 <div class="button-container">
-    <button id="clockInBtn" onclick="record('Clock In')">Clock In</button>
-    <button id="clockOutBtn" onclick="record('Clock Out')">Clock Out</button>
+    <button id="clockInBtn" class="tooltip" data-tip="" onclick="record('Clock In')">Clock In</button>
+    <button id="clockOutBtn" class="tooltip" data-tip="" onclick="record('Clock Out')">Clock Out</button>
 </div>
 
 <div id="scrollArea">
@@ -257,187 +291,4 @@
         <h3>Edit Entry</h3>
         <input id="editDate" placeholder="DD/MM/YYYY">
         <input id="editTime" placeholder="HH:MM">
-        <div id="errorMsg"></div>
-        <button id="saveEditBtn" onclick="saveEdit()">Save</button>
-        <button id="cancelEditBtn" onclick="closeModal()">Cancel</button>
-    </div>
-</div>
-
-<script>
-    let logs = JSON.parse(localStorage.getItem("timeLogs") || "[]");
-    let editingId = null;
-
-    /* Track last action to enforce rules */
-    let lastAction = logs.length ? logs[0].action : "Clock Out";
-
-    /* Live Clock */
-    function updateClock() {
-        const now = new Date();
-        document.getElementById("liveClock").textContent =
-            now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    /* Enforce Clock In/Out rules */
-    function updateButtons() {
-        if (lastAction === "Clock In") {
-            document.getElementById("clockInBtn").disabled = true;
-            document.getElementById("clockOutBtn").disabled = false;
-        } else {
-            document.getElementById("clockInBtn").disabled = false;
-            document.getElementById("clockOutBtn").disabled = true;
-        }
-    }
-    updateButtons();
-
-    /* Record Entry */
-    function record(action) {
-        if (action === "Clock In" && lastAction === "Clock In") return;
-        if (action === "Clock Out" && lastAction === "Clock Out") return;
-
-        const now = new Date();
-        const entry = {
-            id: crypto.randomUUID(),
-            action: action,
-            date: now.toLocaleDateString(),
-            time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            timestamp: now.getTime()
-        };
-
-        logs.unshift(entry);
-        lastAction = action;
-
-        localStorage.setItem("timeLogs", JSON.stringify(logs));
-        renderTable();
-        updateButtons();
-    }
-
-    /* Open modal */
-    function editEntry(id) {
-        editingId = id;
-        const entry = logs.find(r => r.id === id);
-
-        document.getElementById("editDate").value = entry.date;
-        document.getElementById("editTime").value = entry.time;
-        document.getElementById("errorMsg").textContent = "";
-
-        document.getElementById("modalOverlay").style.display = "flex";
-    }
-
-    /* Close modal */
-    function closeModal() {
-        document.getElementById("modalOverlay").style.display = "none";
-    }
-
-    /* Validate date/time */
-    function validate(date, time) {
-        const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-        const timeRegex = /^\d{2}:\d{2}$/;
-
-        if (!dateRegex.test(date)) return "Invalid date format";
-        if (!timeRegex.test(time)) return "Invalid time format";
-
-        return "";
-    }
-
-    /* Save edit */
-    function saveEdit() {
-        const date = document.getElementById("editDate").value;
-        const time = document.getElementById("editTime").value;
-
-        const error = validate(date, time);
-        if (error) {
-            document.getElementById("errorMsg").textContent = error;
-            return;
-        }
-
-        const entry = logs.find(r => r.id === editingId);
-        entry.date = date;
-        entry.time = time;
-
-        const dt = new Date(`${date} ${time}`);
-        entry.timestamp = dt.getTime();
-
-        logs.sort((a, b) => b.timestamp - a.timestamp);
-
-        localStorage.setItem("timeLogs", JSON.stringify(logs));
-
-        closeModal();
-        renderTable(true, editingId);
-    }
-
-    /* Render table */
-    function renderTable(animate = false, editedId = null) {
-        const tbody = document.querySelector("#logTable tbody");
-        tbody.innerHTML = "";
-
-        let lastDate = "";
-        let dayToggle = false;
-
-        logs.forEach(row => {
-            if (row.date !== lastDate) {
-                dayToggle = !dayToggle;
-                lastDate = row.date;
-            }
-
-            const tr = document.createElement("tr");
-            tr.className = dayToggle ? "dayA" : "dayB";
-
-            if (animate && row.id === editedId) {
-                tr.classList.add("edited");
-            }
-
-            tr.innerHTML = `
-                <td class="${row.action === 'Clock In' ? 'action-in' : 'action-out'}">${row.action}</td>
-                <td>${row.date}</td>
-                <td>${row.time}</td>
-                <td class="actionCell"><button class="editBtn" onclick="editEntry('${row.id}')">✏️</button></td>
-                <td class="actionCell"><button class="deleteBtn" onclick="deleteEntry('${row.id}')">🗑️</button></td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    /* Delete a single entry */
-    function deleteEntry(id) {
-        logs = logs.filter(row => row.id !== id);
-        localStorage.setItem("timeLogs", JSON.stringify(logs));
-        renderTable();
-    }
-
-    /* Download CSV */
-    function downloadCSV() {
-        let csv = "Action,Date,Time\n";
-        logs.forEach(row => {
-            csv += `${row.action},${row.date},${row.time}\n`;
-        });
-
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "time_log.csv";
-        a.click();
-
-        URL.revokeObjectURL(url);
-    }
-
-    /* Reset with confirmation */
-    function confirmReset() {
-        if (confirm("Are you sure you want to delete ALL data?")) {
-            logs = [];
-            lastAction = "Clock Out";
-            localStorage.removeItem("timeLogs");
-            renderTable();
-            updateButtons();
-            alert("All data has been reset.");
-        }
-    }
-
-    renderTable();
-</script>
-
-</body>
-</html>
+        <div id="
