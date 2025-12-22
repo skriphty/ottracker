@@ -74,7 +74,7 @@
 
         /* Yellow / Blue buttons */
         #clockInBtn {
-            background: #d4c21f; /* yellow */
+            background: #d4c21f;
             color: black;
         }
         #clockInBtn:hover {
@@ -83,7 +83,7 @@
         }
 
         #clockOutBtn {
-            background: #1f4fd4; /* blue */
+            background: #1f4fd4;
             color: white;
         }
         #clockOutBtn:hover {
@@ -151,7 +151,7 @@
         .dayA { background: #1a1a1a; }
         .dayB { background: #222222; }
 
-        /* Action colors (yellow/blue) */
+        /* Action colors */
         .action-in {
             color: #e8d63a;
             font-weight: bold;
@@ -220,15 +220,6 @@
             border-radius: 8px;
             margin-top: 10px;
         }
-
-        /* Day-of-week header row */
-        .dayHeader {
-            background: #333;
-            color: #e0e0e0;
-            font-weight: bold;
-            text-align: left;
-            padding: 6px 10px;
-        }
     </style>
 </head>
 <body>
@@ -252,6 +243,7 @@
                 <th>Action</th>
                 <th>Date</th>
                 <th>Time</th>
+                <th>Hours</th>
                 <th>Edit</th>
                 <th>Delete</th>
             </tr>
@@ -275,8 +267,9 @@
 <script>
     let logs = JSON.parse(localStorage.getItem("timeLogs") || "[]");
     let editingId = null;
+    let lastAction = logs.length ? logs[0].action : "Clock Out";
 
-    /* Live Clock (with seconds) */
+    /* Live Clock */
     function updateClock() {
         const now = new Date();
         document.getElementById("liveClock").textContent =
@@ -285,22 +278,56 @@
     setInterval(updateClock, 1000);
     updateClock();
 
+    /* Disable/Enable buttons based on last action */
+    function updateButtons() {
+        if (lastAction === "Clock In") {
+            document.getElementById("clockInBtn").disabled = true;
+            document.getElementById("clockOutBtn").disabled = false;
+        } else {
+            document.getElementById("clockInBtn").disabled = false;
+            document.getElementById("clockOutBtn").disabled = true;
+        }
+    }
+    updateButtons();
+
     /* Record Entry */
     function record(action) {
+        if (action === "Clock In" && lastAction === "Clock In") return;
+        if (action === "Clock Out" && lastAction === "Clock Out") return;
+
         const now = new Date();
         const entry = {
             id: crypto.randomUUID(),
             action: action,
             date: now.toLocaleDateString(),
             time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            timestamp: now.getTime()
+            timestamp: now.getTime(),
+            hours: ""
         };
 
-        logs.push(entry);
-        logs.sort((a, b) => b.timestamp - a.timestamp);
+        logs.unshift(entry);
+        lastAction = action;
 
+        calculateHours();
         localStorage.setItem("timeLogs", JSON.stringify(logs));
         renderTable();
+        updateButtons();
+    }
+
+    /* Calculate hours between Clock In → Clock Out */
+    function calculateHours() {
+        let lastIn = null;
+
+        logs.forEach(entry => {
+            if (entry.action === "Clock In") {
+                lastIn = entry;
+                entry.hours = "";
+            } else if (entry.action === "Clock Out" && lastIn) {
+                const diff = (entry.timestamp - lastIn.timestamp) / 3600000;
+                entry.hours = diff.toFixed(2);
+                lastIn = null;
+            }
+        });
     }
 
     /* Open modal */
@@ -351,6 +378,7 @@
 
         logs.sort((a, b) => b.timestamp - a.timestamp);
 
+        calculateHours();
         localStorage.setItem("timeLogs", JSON.stringify(logs));
 
         closeModal();
@@ -368,15 +396,6 @@
         logs.forEach(row => {
             if (row.date !== lastDate) {
                 dayToggle = !dayToggle;
-
-                const dayName = new Date(row.timestamp).toLocaleDateString("en-GB", {
-                    weekday: "long"
-                });
-
-                const headerRow = document.createElement("tr");
-                headerRow.innerHTML = `<td colspan="5" class="dayHeader">${dayName}</td>`;
-                tbody.appendChild(headerRow);
-
                 lastDate = row.date;
             }
 
@@ -391,6 +410,7 @@
                 <td class="${row.action === 'Clock In' ? 'action-in' : 'action-out'}">${row.action}</td>
                 <td>${row.date}</td>
                 <td>${row.time}</td>
+                <td>${row.hours}</td>
                 <td class="actionCell"><button class="editBtn" onclick="editEntry('${row.id}')">✏️</button></td>
                 <td class="actionCell"><button class="deleteBtn" onclick="deleteEntry('${row.id}')">🗑️</button></td>
             `;
@@ -401,24 +421,16 @@
     /* Delete a single entry */
     function deleteEntry(id) {
         logs = logs.filter(row => row.id !== id);
+        calculateHours();
         localStorage.setItem("timeLogs", JSON.stringify(logs));
         renderTable();
     }
 
-    /* Download CSV (Date | Clock In | Clock Out) */
+    /* Download CSV */
     function downloadCSV() {
-        const grouped = {};
-
+        let csv = "Action,Date,Time,Hours\n";
         logs.forEach(row => {
-            if (!grouped[row.date]) grouped[row.date] = { in: "", out: "" };
-            if (row.action === "Clock In") grouped[row.date].in = row.time;
-            if (row.action === "Clock Out") grouped[row.date].out = row.time;
-        });
-
-        let csv = "Date,Clock In,Clock Out\n";
-
-        Object.keys(grouped).forEach(date => {
-            csv += `${date},${grouped[date].in},${grouped[date].out}\n`;
+            csv += `${row.action},${row.date},${row.time},${row.hours}\n`;
         });
 
         const blob = new Blob([csv], { type: "text/csv" });
@@ -436,12 +448,15 @@
     function confirmReset() {
         if (confirm("Are you sure you want to delete ALL data?")) {
             logs = [];
+            lastAction = "Clock Out";
             localStorage.removeItem("timeLogs");
             renderTable();
+            updateButtons();
             alert("All data has been reset.");
         }
     }
 
+    calculateHours();
     renderTable();
 </script>
 
