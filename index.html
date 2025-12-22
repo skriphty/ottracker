@@ -19,8 +19,16 @@
         #liveClock {
             text-align: center;
             font-size: 32px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             color: #b0b0b0;
+        }
+
+        /* Session timer */
+        #sessionTimer {
+            text-align: center;
+            font-size: 26px;
+            margin-bottom: 20px;
+            color: #e8d63a;
         }
 
         /* Reset button */
@@ -230,6 +238,7 @@
 <h1>Time Tracker</h1>
 
 <div id="liveClock">--:--:--</div>
+<div id="sessionTimer">Session: 00:00:00</div>
 
 <div class="button-container">
     <button id="clockInBtn" onclick="record('Clock In')">Clock In</button>
@@ -267,7 +276,29 @@
 <script>
     let logs = JSON.parse(localStorage.getItem("timeLogs") || "[]");
     let editingId = null;
-    let lastAction = logs.length ? logs[0].action : "Clock Out";
+
+    /* SESSION TIMER */
+    let sessionStart = null;
+    let sessionInterval = null;
+
+    function startSessionTimer() {
+        sessionStart = Date.now();
+        clearInterval(sessionInterval);
+
+        sessionInterval = setInterval(() => {
+            const diff = Date.now() - sessionStart;
+            const h = String(Math.floor(diff / 3600000)).padStart(2, "0");
+            const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
+            const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+            document.getElementById("sessionTimer").textContent = `Session: ${h}:${m}:${s}`;
+        }, 1000);
+    }
+
+    function stopSessionTimer() {
+        clearInterval(sessionInterval);
+        document.getElementById("sessionTimer").textContent = "Session: 00:00:00";
+        sessionStart = null;
+    }
 
     /* Live Clock */
     function updateClock() {
@@ -278,23 +309,8 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    /* Disable/Enable buttons based on last action */
-    function updateButtons() {
-        if (lastAction === "Clock In") {
-            document.getElementById("clockInBtn").disabled = true;
-            document.getElementById("clockOutBtn").disabled = false;
-        } else {
-            document.getElementById("clockInBtn").disabled = false;
-            document.getElementById("clockOutBtn").disabled = true;
-        }
-    }
-    updateButtons();
-
     /* Record Entry */
     function record(action) {
-        if (action === "Clock In" && lastAction === "Clock In") return;
-        if (action === "Clock Out" && lastAction === "Clock Out") return;
-
         const now = new Date();
         const entry = {
             id: crypto.randomUUID(),
@@ -306,12 +322,18 @@
         };
 
         logs.unshift(entry);
-        lastAction = action;
+
+        if (action === "Clock In") {
+            startSessionTimer();
+        }
+
+        if (action === "Clock Out") {
+            stopSessionTimer();
+        }
 
         calculateHours();
         localStorage.setItem("timeLogs", JSON.stringify(logs));
         renderTable();
-        updateButtons();
     }
 
     /* Calculate hours between Clock In → Clock Out */
@@ -448,17 +470,9 @@
     function confirmReset() {
         if (confirm("Are you sure you want to delete ALL data?")) {
             logs = [];
-            lastAction = "Clock Out";
             localStorage.removeItem("timeLogs");
+            stopSessionTimer();
             renderTable();
-            updateButtons();
             alert("All data has been reset.");
         }
     }
-
-    calculateHours();
-    renderTable();
-</script>
-
-</body>
-</html>
