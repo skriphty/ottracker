@@ -151,6 +151,28 @@
         .dayCell.selected .hoursText {
             color: #ffe066 !important; /* yellow pop */
         }
+
+        /* Counter box styling */
+        #selectedTotalBox {
+            width: 1000px;
+            margin: 30px auto 0 auto;
+            background: #1e1e1e;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            color: #e8d63a;
+            font-size: 28px;
+            font-weight: bold;
+            box-shadow: 0 0 12px rgba(0,0,0,0.4);
+            transition: 0.25s ease;
+        }
+
+        /* Slight glow when total changes */
+        #selectedTotalBox.updated {
+            box-shadow: 0 0 18px rgba(31,79,212,0.6);
+        }
+
     </style>
 </head>
 <body>
@@ -185,9 +207,8 @@
 </div>
 
 <!-- TOTAL HOURS COUNTER -->
-<div id="selectedTotal"
-     style="text-align:center; font-size:26px; margin-top:25px; color:#e8d63a; font-weight:bold;">
-    Selected Hours: 0.00h
+<div id="selectedTotalBox">
+    <span id="selectedTotal">Selected Hours: 0.00h</span>
 </div>
 <script>
 /* ----------------------------------------
