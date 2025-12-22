@@ -229,6 +229,7 @@
     <table id="logTable">
         <thead>
             <tr>
+                <th>Shift</th>
                 <th>Action</th>
                 <th>Date</th>
                 <th>Time</th>
@@ -260,6 +261,34 @@ setInterval(() => {
     document.getElementById("liveClock").textContent =
         new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }, 1000);
+
+/* SHIFT CALCULATION (strict pairing) */
+function calculateShifts() {
+    let shift = 0;
+    let lastIn = null;
+
+    // oldest → newest
+    const chronological = [...logs].sort((a, b) => a.timestamp - b.timestamp);
+
+    chronological.forEach(entry => {
+        entry.shift = ""; // reset
+
+        if (entry.action === "Clock In") {
+            lastIn = entry;
+        } else if (entry.action === "Clock Out" && lastIn) {
+            shift++;
+            lastIn.shift = shift;
+            entry.shift = shift;
+            lastIn = null;
+        }
+    });
+
+    // newest-first list gets updated shift numbers
+    logs.forEach(entry => {
+        const match = chronological.find(c => c.id === entry.id);
+        entry.shift = match.shift;
+    });
+}
 
 /* Update button states */
 function updateButtons() {
@@ -294,7 +323,6 @@ function updateButtons() {
 /* Record Entry */
 function record(action) {
     const last = logs[0] ? logs[0].action : null;
-
     if (action === last) return;
 
     const now = new Date();
@@ -303,9 +331,11 @@ function record(action) {
         action,
         date: now.toLocaleDateString(),
         time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        timestamp: now.getTime()
+        timestamp: now.getTime(),
+        shift: ""
     });
 
+    calculateShifts();
     localStorage.setItem("timeLogs", JSON.stringify(logs));
     renderTable();
 }
@@ -349,6 +379,7 @@ function saveEdit() {
 
     logs.sort((a, b) => b.timestamp - a.timestamp);
 
+    calculateShifts();
     localStorage.setItem("timeLogs", JSON.stringify(logs));
     closeModal();
     renderTable(true, editingId);
@@ -357,6 +388,7 @@ function saveEdit() {
 /* Delete Entry */
 function deleteEntry(id) {
     logs = logs.filter(e => e.id !== id);
+    calculateShifts();
     localStorage.setItem("timeLogs", JSON.stringify(logs));
     renderTable();
 }
@@ -370,60 +402,4 @@ function renderTable(animate = false, editedId = null) {
     let toggle = false;
 
     logs.forEach(row => {
-        if (row.date !== lastDate) {
-            toggle = !toggle;
-            lastDate = row.date;
-        }
-
-        const tr = document.createElement("tr");
-        tr.className = toggle ? "dayA" : "dayB";
-
-        if (animate && row.id === editedId) tr.classList.add("edited");
-
-        tr.innerHTML = `
-            <td class="${row.action === 'Clock In' ? 'action-in' : 'action-out'}">${row.action}</td>
-            <td>${row.date}</td>
-            <td>${row.time}</td>
-            <td class="actionCell"><button class="editBtn" onclick="editEntry('${row.id}')">✏️</button></td>
-            <td class="actionCell"><button class="deleteBtn" onclick="deleteEntry('${row.id}')">🗑️</button></td>
-        `;
-
-        tbody.appendChild(tr);
-    });
-
-    updateButtons();
-}
-
-/* Download CSV */
-function downloadCSV() {
-    let csv = "Action,Date,Time\n";
-    logs.forEach(row => {
-        csv += `${row.action},${row.date},${row.time}\n`;
-    });
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "time_log.csv";
-    a.click();
-
-    URL.revokeObjectURL(url);
-}
-
-/* Reset */
-function confirmReset() {
-    if (confirm("Are you sure you want to delete ALL data?")) {
-        logs = [];
-        localStorage.removeItem("timeLogs");
-        renderTable();
-        alert("All data has been reset.");
-    }
-}
-
-renderTable();
-</script>
-
-</body>
-</html>
+        if (row.date !== lastDate)
