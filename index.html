@@ -17,7 +17,39 @@
             color: #ffffff;
         }
 
-        /* Live clock */
+        /* ------------------------------
+           TOP NAV MENU
+        ------------------------------ */
+        #topMenu {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 20px;
+        }
+
+        #topMenu a {
+            color: #b0b0b0;
+            text-decoration: none;
+            margin: 0 20px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+
+        #topMenu a:hover {
+            background: #1f1f1f;
+            color: #ffffff;
+        }
+
+        #topMenu .active {
+            background: #2a2a2a;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        /* ------------------------------
+           LIVE CLOCK + STATUS
+        ------------------------------ */
         #liveClock {
             text-align: center;
             font-size: 32px;
@@ -25,7 +57,6 @@
             color: #b0b0b0;
         }
 
-        /* Status text */
         #statusText {
             text-align: center;
             font-size: 22px;
@@ -33,7 +64,9 @@
             color: #e8d63a;
         }
 
-        /* Reset button */
+        /* ------------------------------
+           RESET + DOWNLOAD BUTTONS
+        ------------------------------ */
         #resetBtn {
             position: absolute;
             top: 20px;
@@ -50,7 +83,6 @@
             background: #3a3a3a;
         }
 
-        /* Download button */
         #downloadBtn {
             position: absolute;
             top: 20px;
@@ -68,7 +100,9 @@
             background: #3a3a3a;
         }
 
-        /* Button container */
+        /* ------------------------------
+           MAIN BUTTONS
+        ------------------------------ */
         .button-container {
             display: flex;
             justify-content: center;
@@ -76,7 +110,6 @@
             margin-top: 20px;
         }
 
-        /* Main buttons */
         button {
             padding: 30px 50px;
             font-size: 24px;
@@ -86,7 +119,6 @@
             transition: all 0.3s ease;
         }
 
-        /* Clock In button */
         #clockInBtn {
             background: #d4c21f;
             color: black;
@@ -96,7 +128,6 @@
             transform: scale(1.05);
         }
 
-        /* Clock Out button */
         #clockOutBtn {
             background: #1f4fd4;
             color: white;
@@ -106,7 +137,6 @@
             transform: scale(1.05);
         }
 
-        /* Disabled button */
         .disabledBtn {
             background: #000 !important;
             color: #666 !important;
@@ -135,7 +165,9 @@
             pointer-events: none;
         }
 
-        /* Scrollable table */
+        /* ------------------------------
+           TABLE
+        ------------------------------ */
         #scrollArea {
             max-height: 650px;
             overflow-y: auto;
@@ -194,7 +226,7 @@
 
         /* Alternating day colors */
         .dayA {
-            background: #000000;
+            background: #1a1a1a;
         }
         .dayB {
             background: #222222;
@@ -219,7 +251,9 @@
             100% { background-color: inherit; }
         }
 
-        /* Modal overlay */
+        /* ------------------------------
+           MODAL
+        ------------------------------ */
         #modalOverlay {
             position: fixed;
             top: 0;
@@ -232,7 +266,6 @@
             align-items: center;
         }
 
-        /* Modal box */
         #editModal {
             background: #1e1e1e;
             padding: 25px;
@@ -260,6 +293,12 @@
     </style>
 </head>
 <body>
+
+<!-- TOP NAVIGATION MENU -->
+<div id="topMenu">
+    <a href="index.html" class="active">Time Log</a>
+    <a href="calendar.html">Calendar</a>
+</div>
 
 <button id="resetBtn" onclick="confirmReset()">Reset</button>
 <button id="downloadBtn" onclick="downloadCSV()">Download</button>
@@ -358,13 +397,14 @@ function calculateShifts() {
     chronological.forEach(entry => {
         if (entry.action === "Clock In") {
             lastIn = entry;
-        } else if (entry.action === "Clock Out" && lastIn) {
+        } 
+        else if (entry.action === "Clock Out" && lastIn) {
             shift++;
 
             const diffHours = (entry.timestamp - lastIn.timestamp) / 3600000;
             const hours = diffHours.toFixed(2);
 
-            // Assign only to the Clock Out row
+            // Clock Out row gets values
             entry.shift = shift;
             entry.hours = hours;
 
@@ -410,7 +450,8 @@ function updateButtons() {
         inBtn.classList.add("disabledBtn");
         inBtn.setAttribute("data-tip", "You must clock out before clocking in again");
         status.textContent = "Status: You are currently clocked in";
-    } else if (last === "Clock Out") {
+    } 
+    else if (last === "Clock Out") {
         outBtn.disabled = true;
         outBtn.classList.add("disabledBtn");
         outBtn.setAttribute("data-tip", "You must clock in before clocking out again");
@@ -444,7 +485,7 @@ function record(action) {
     localStorage.setItem("timeLogs", JSON.stringify(logs));
     renderTable();
 }
-    /* ------------------------------
+/* ------------------------------
    EDIT ENTRY
 ------------------------------ */
 function editEntry(id) {
