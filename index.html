@@ -364,11 +364,13 @@ function calculateShifts() {
             const diffHours = (entry.timestamp - lastIn.timestamp) / 3600000;
             const hours = diffHours.toFixed(2);
 
-            lastIn.shift = shift;
+            // Assign only to the Clock Out row
             entry.shift = shift;
-
-            lastIn.hours = hours;
             entry.hours = hours;
+
+            // Clock In row stays blank
+            lastIn.shift = "";
+            lastIn.hours = "";
 
             lastIn = null;
         }
