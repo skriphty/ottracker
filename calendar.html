@@ -243,8 +243,15 @@ function updateSelectedTotal(hoursByDay) {
         }
     });
 
-    document.getElementById("selectedTotal").textContent =
-        "Selected Hours: " + total.toFixed(2) + "h";
+    const totalElem = document.getElementById("selectedTotal");
+    const box = document.getElementById("selectedTotalBox");
+
+    totalElem.textContent = "Selected Hours: " + total.toFixed(2) + "h";
+
+    /* Glow animation */
+        box.classList.add("updated");
+        setTimeout(() => box.classList.remove("updated"), 300);
+
 }
 
 /* ----------------------------------------
