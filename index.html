@@ -37,10 +37,22 @@
             cursor: pointer;
             transition: 0.2s;
         }
+        #resetBtn:hover { background: #3a3a3a; }
 
-        #resetBtn:hover {
-            background: #3a3a3a;
+        /* Download button (top right) */
+        #downloadBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #2a2a2a;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 18px;
+            border: none;
+            cursor: pointer;
         }
+        #downloadBtn:hover { background: #3a3a3a; }
 
         /* Center button container */
         .button-container {
@@ -60,32 +72,30 @@
             transition: transform 0.15s ease, background 0.2s;
         }
 
-        /* Different colors */
+        /* Yellow / Blue buttons */
         #clockInBtn {
-            background: #1e7f1e;
-            color: white;
+            background: #d4c21f; /* yellow */
+            color: black;
         }
         #clockInBtn:hover {
-            background: #27a327;
+            background: #e8d63a;
             transform: scale(1.05);
         }
 
         #clockOutBtn {
-            background: #8b1e1e;
+            background: #1f4fd4; /* blue */
             color: white;
         }
         #clockOutBtn:hover {
-            background: #b32424;
+            background: #3a6af0;
             transform: scale(1.05);
         }
 
-        button:active {
-            transform: scale(0.95);
-        }
+        button:active { transform: scale(0.95); }
 
         /* Scrollable table */
         #scrollArea {
-            max-height: 650px; /* Taller table */
+            max-height: 650px;
             overflow-y: auto;
             margin-top: 25px;
         }
@@ -98,19 +108,15 @@
         }
 
         th, td {
-            padding: 4px 6px; /* Narrower rows */
+            padding: 4px 6px;
             border: 1px solid #333;
             text-align: center;
         }
 
-        th {
-            background: #272727;
-        }
+        th { background: #272727; }
 
         /* Narrow action columns */
-        td.actionCell {
-            width: 40px;
-        }
+        td.actionCell { width: 40px; }
 
         /* Delete button */
         .deleteBtn {
@@ -121,7 +127,6 @@
             cursor: pointer;
             transition: 0.2s;
         }
-
         .deleteBtn:hover {
             color: #ff7777;
             transform: scale(1.2);
@@ -137,7 +142,6 @@
             margin-right: 5px;
             transition: 0.2s;
         }
-
         .editBtn:hover {
             color: #77bbff;
             transform: scale(1.2);
@@ -147,13 +151,13 @@
         .dayA { background: #1a1a1a; }
         .dayB { background: #222222; }
 
-        /* Action colors */
+        /* Action colors (yellow/blue) */
         .action-in {
-            color: #27a327;
+            color: #e8d63a;
             font-weight: bold;
         }
         .action-out {
-            color: #ff5555;
+            color: #3a6af0;
             font-weight: bold;
         }
 
@@ -164,20 +168,6 @@
         @keyframes glow {
             0% { background-color: #444444; }
             100% { background-color: inherit; }
-        }
-
-        #downloadBtn {
-            display: block;
-            margin: 25px auto;
-            background: #2a2a2a;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            font-size: 18px;
-        }
-
-        #downloadBtn:hover {
-            background: #3a3a3a;
         }
 
         /* Modal background */
@@ -230,11 +220,21 @@
             border-radius: 8px;
             margin-top: 10px;
         }
+
+        /* Day-of-week header row */
+        .dayHeader {
+            background: #333;
+            color: #e0e0e0;
+            font-weight: bold;
+            text-align: left;
+            padding: 6px 10px;
+        }
     </style>
 </head>
 <body>
 
 <button id="resetBtn" onclick="confirmReset()">Reset</button>
+<button id="downloadBtn" onclick="downloadCSV()">Download</button>
 
 <h1>Time Tracker</h1>
 
@@ -259,8 +259,6 @@
         <tbody></tbody>
     </table>
 </div>
-
-<button id="downloadBtn" onclick="downloadCSV()">Download Spreadsheet</button>
 
 <!-- Modal -->
 <div id="modalOverlay">
@@ -299,7 +297,7 @@
         };
 
         logs.push(entry);
-        logs.sort((a, b) => b.timestamp - a.timestamp); // newest first
+        logs.sort((a, b) => b.timestamp - a.timestamp);
 
         localStorage.setItem("timeLogs", JSON.stringify(logs));
         renderTable();
@@ -368,8 +366,19 @@
         let dayToggle = false;
 
         logs.forEach(row => {
-            if (row.date !== lastDate) dayToggle = !dayToggle;
-            lastDate = row.date;
+            if (row.date !== lastDate) {
+                dayToggle = !dayToggle;
+
+                const dayName = new Date(row.timestamp).toLocaleDateString("en-GB", {
+                    weekday: "long"
+                });
+
+                const headerRow = document.createElement("tr");
+                headerRow.innerHTML = `<td colspan="5" class="dayHeader">${dayName}</td>`;
+                tbody.appendChild(headerRow);
+
+                lastDate = row.date;
+            }
 
             const tr = document.createElement("tr");
             tr.className = dayToggle ? "dayA" : "dayB";
