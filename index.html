@@ -19,16 +19,8 @@
         #liveClock {
             text-align: center;
             font-size: 32px;
-            margin-bottom: 10px;
-            color: #b0b0b0;
-        }
-
-        /* Session timer */
-        #sessionTimer {
-            text-align: center;
-            font-size: 26px;
             margin-bottom: 20px;
-            color: #e8d63a;
+            color: #b0b0b0;
         }
 
         /* Reset button */
@@ -238,7 +230,6 @@
 <h1>Time Tracker</h1>
 
 <div id="liveClock">--:--:--</div>
-<div id="sessionTimer">Session: 00:00:00</div>
 
 <div class="button-container">
     <button id="clockInBtn" onclick="record('Clock In')">Clock In</button>
@@ -252,7 +243,6 @@
                 <th>Action</th>
                 <th>Date</th>
                 <th>Time</th>
-                <th>Hours</th>
                 <th>Edit</th>
                 <th>Delete</th>
             </tr>
@@ -277,28 +267,8 @@
     let logs = JSON.parse(localStorage.getItem("timeLogs") || "[]");
     let editingId = null;
 
-    /* SESSION TIMER */
-    let sessionStart = null;
-    let sessionInterval = null;
-
-    function startSessionTimer() {
-        sessionStart = Date.now();
-        clearInterval(sessionInterval);
-
-        sessionInterval = setInterval(() => {
-            const diff = Date.now() - sessionStart;
-            const h = String(Math.floor(diff / 3600000)).padStart(2, "0");
-            const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
-            const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
-            document.getElementById("sessionTimer").textContent = `Session: ${h}:${m}:${s}`;
-        }, 1000);
-    }
-
-    function stopSessionTimer() {
-        clearInterval(sessionInterval);
-        document.getElementById("sessionTimer").textContent = "Session: 00:00:00";
-        sessionStart = null;
-    }
+    /* Track last action to enforce rules */
+    let lastAction = logs.length ? logs[0].action : "Clock Out";
 
     /* Live Clock */
     function updateClock() {
@@ -309,47 +279,38 @@
     setInterval(updateClock, 1000);
     updateClock();
 
+    /* Enforce Clock In/Out rules */
+    function updateButtons() {
+        if (lastAction === "Clock In") {
+            document.getElementById("clockInBtn").disabled = true;
+            document.getElementById("clockOutBtn").disabled = false;
+        } else {
+            document.getElementById("clockInBtn").disabled = false;
+            document.getElementById("clockOutBtn").disabled = true;
+        }
+    }
+    updateButtons();
+
     /* Record Entry */
     function record(action) {
+        if (action === "Clock In" && lastAction === "Clock In") return;
+        if (action === "Clock Out" && lastAction === "Clock Out") return;
+
         const now = new Date();
         const entry = {
             id: crypto.randomUUID(),
             action: action,
             date: now.toLocaleDateString(),
             time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            timestamp: now.getTime(),
-            hours: ""
+            timestamp: now.getTime()
         };
 
         logs.unshift(entry);
+        lastAction = action;
 
-        if (action === "Clock In") {
-            startSessionTimer();
-        }
-
-        if (action === "Clock Out") {
-            stopSessionTimer();
-        }
-
-        calculateHours();
         localStorage.setItem("timeLogs", JSON.stringify(logs));
         renderTable();
-    }
-
-    /* Calculate hours between Clock In → Clock Out */
-    function calculateHours() {
-        let lastIn = null;
-
-        logs.forEach(entry => {
-            if (entry.action === "Clock In") {
-                lastIn = entry;
-                entry.hours = "";
-            } else if (entry.action === "Clock Out" && lastIn) {
-                const diff = (entry.timestamp - lastIn.timestamp) / 3600000;
-                entry.hours = diff.toFixed(2);
-                lastIn = null;
-            }
-        });
+        updateButtons();
     }
 
     /* Open modal */
@@ -400,7 +361,6 @@
 
         logs.sort((a, b) => b.timestamp - a.timestamp);
 
-        calculateHours();
         localStorage.setItem("timeLogs", JSON.stringify(logs));
 
         closeModal();
@@ -432,7 +392,6 @@
                 <td class="${row.action === 'Clock In' ? 'action-in' : 'action-out'}">${row.action}</td>
                 <td>${row.date}</td>
                 <td>${row.time}</td>
-                <td>${row.hours}</td>
                 <td class="actionCell"><button class="editBtn" onclick="editEntry('${row.id}')">✏️</button></td>
                 <td class="actionCell"><button class="deleteBtn" onclick="deleteEntry('${row.id}')">🗑️</button></td>
             `;
@@ -443,16 +402,15 @@
     /* Delete a single entry */
     function deleteEntry(id) {
         logs = logs.filter(row => row.id !== id);
-        calculateHours();
         localStorage.setItem("timeLogs", JSON.stringify(logs));
         renderTable();
     }
 
     /* Download CSV */
     function downloadCSV() {
-        let csv = "Action,Date,Time,Hours\n";
+        let csv = "Action,Date,Time\n";
         logs.forEach(row => {
-            csv += `${row.action},${row.date},${row.time},${row.hours}\n`;
+            csv += `${row.action},${row.date},${row.time}\n`;
         });
 
         const blob = new Blob([csv], { type: "text/csv" });
@@ -470,9 +428,16 @@
     function confirmReset() {
         if (confirm("Are you sure you want to delete ALL data?")) {
             logs = [];
+            lastAction = "Clock Out";
             localStorage.removeItem("timeLogs");
-            stopSessionTimer();
             renderTable();
+            updateButtons();
             alert("All data has been reset.");
         }
     }
+
+    renderTable();
+</script>
+
+</body>
+</html>
