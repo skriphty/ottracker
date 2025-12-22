@@ -50,9 +50,9 @@
             margin-top: 20px;
         }
 
-        /* Bigger buttons + animations */
+        /* Bigger buttons */
         button {
-            padding: 30px 50px; /* Twice as big */
+            padding: 30px 50px;
             font-size: 24px;
             cursor: pointer;
             border: none;
@@ -83,16 +83,21 @@
             transform: scale(0.95);
         }
 
-        /* Collapsible table */
+        /* Collapsible table container */
         #tableContainer {
             overflow: hidden;
             max-height: 0;
             transition: max-height 0.5s ease;
         }
 
+        /* Scrollable table */
+        #scrollArea {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
         table {
             width: 100%;
-            margin-top: 20px;
             border-collapse: collapse;
             background: #1e1e1e;
             color: #e0e0e0;
@@ -121,6 +126,24 @@
         .deleteBtn:hover {
             color: #ff7777;
             transform: scale(1.2);
+        }
+
+        /* Alternating day colors */
+        .dayA {
+            background: #1a1a1a;
+        }
+        .dayB {
+            background: #222222;
+        }
+
+        /* Action colors */
+        .action-in {
+            color: #27a327;
+            font-weight: bold;
+        }
+        .action-out {
+            color: #ff5555;
+            font-weight: bold;
         }
 
         #toggleTableBtn, #downloadBtn {
@@ -154,17 +177,19 @@
 <button id="toggleTableBtn" onclick="toggleTable()">Show Today’s Log</button>
 
 <div id="tableContainer">
-    <table id="logTable">
-        <thead>
-            <tr>
-                <th>Action</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Delete</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <div id="scrollArea">
+        <table id="logTable">
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 </div>
 
 <button id="downloadBtn" onclick="downloadCSV()">Download Spreadsheet</button>
@@ -206,15 +231,20 @@
         tbody.innerHTML = "";
 
         const today = new Date().toLocaleDateString();
+        const filtered = tableVisible ? logs : logs.filter(r => r.date === today);
 
-        const filtered = tableVisible
-            ? logs
-            : logs.filter(row => row.date === today);
+        let lastDate = "";
+        let dayToggle = false;
 
         filtered.forEach(row => {
+            if (row.date !== lastDate) dayToggle = !dayToggle;
+            lastDate = row.date;
+
             const tr = document.createElement("tr");
+            tr.className = dayToggle ? "dayA" : "dayB";
+
             tr.innerHTML = `
-                <td>${row.action}</td>
+                <td class="${row.action === 'Clock In' ? 'action-in' : 'action-out'}">${row.action}</td>
                 <td>${row.date}</td>
                 <td>${row.time}</td>
                 <td><button class="deleteBtn" onclick="deleteEntry('${row.id}')">🗑️</button></td>
@@ -239,7 +269,7 @@
             document.getElementById("toggleTableBtn").textContent =
                 "Show Today’s Log";
         } else {
-            container.style.maxHeight = "600px";
+            container.style.maxHeight = "500px";
             document.getElementById("toggleTableBtn").textContent =
                 "Hide Full Log";
         }
@@ -248,11 +278,20 @@
         renderTable();
     }
 
-    /* Download CSV */
+    /* Download CSV (Date | Clock In | Clock Out) */
     function downloadCSV() {
-        let csv = "Action,Date,Time\n";
+        const grouped = {};
+
         logs.forEach(row => {
-            csv += `${row.action},${row.date},${row.time}\n`;
+            if (!grouped[row.date]) grouped[row.date] = { in: "", out: "" };
+            if (row.action === "Clock In") grouped[row.date].in = row.time;
+            if (row.action === "Clock Out") grouped[row.date].out = row.time;
+        });
+
+        let csv = "Date,Clock In,Clock Out\n";
+
+        Object.keys(grouped).forEach(date => {
+            csv += `${date},${grouped[date].in},${grouped[date].out}\n`;
         });
 
         const blob = new Blob([csv], { type: "text/csv" });
