@@ -85,7 +85,7 @@
 
         /* Scrollable table */
         #scrollArea {
-            max-height: 450px;
+            max-height: 650px; /* Taller table */
             overflow-y: auto;
             margin-top: 25px;
         }
@@ -98,13 +98,18 @@
         }
 
         th, td {
-            padding: 8px;
+            padding: 4px 6px; /* Narrower rows */
             border: 1px solid #333;
             text-align: center;
         }
 
         th {
             background: #272727;
+        }
+
+        /* Narrow action columns */
+        td.actionCell {
+            width: 40px;
         }
 
         /* Delete button */
@@ -129,7 +134,7 @@
             color: #55aaff;
             font-size: 20px;
             cursor: pointer;
-            margin-right: 10px;
+            margin-right: 5px;
             transition: 0.2s;
         }
 
@@ -233,7 +238,7 @@
 
 <h1>Time Tracker</h1>
 
-<div id="liveClock">--:--</div>
+<div id="liveClock">--:--:--</div>
 
 <div class="button-container">
     <button id="clockInBtn" onclick="record('Clock In')">Clock In</button>
@@ -273,11 +278,11 @@
     let logs = JSON.parse(localStorage.getItem("timeLogs") || "[]");
     let editingId = null;
 
-    /* Live Clock */
+    /* Live Clock (with seconds) */
     function updateClock() {
         const now = new Date();
         document.getElementById("liveClock").textContent =
-            now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     }
     setInterval(updateClock, 1000);
     updateClock();
@@ -294,7 +299,7 @@
         };
 
         logs.push(entry);
-        logs.sort((a, b) => a.timestamp - b.timestamp);
+        logs.sort((a, b) => b.timestamp - a.timestamp); // newest first
 
         localStorage.setItem("timeLogs", JSON.stringify(logs));
         renderTable();
@@ -346,7 +351,8 @@
         const dt = new Date(`${date} ${time}`);
         entry.timestamp = dt.getTime();
 
-        logs.sort((a, b) => a.timestamp - b.timestamp);
+        logs.sort((a, b) => b.timestamp - a.timestamp);
+
         localStorage.setItem("timeLogs", JSON.stringify(logs));
 
         closeModal();
@@ -376,8 +382,8 @@
                 <td class="${row.action === 'Clock In' ? 'action-in' : 'action-out'}">${row.action}</td>
                 <td>${row.date}</td>
                 <td>${row.time}</td>
-                <td><button class="editBtn" onclick="editEntry('${row.id}')">✏️</button></td>
-                <td><button class="deleteBtn" onclick="deleteEntry('${row.id}')">🗑️</button></td>
+                <td class="actionCell"><button class="editBtn" onclick="editEntry('${row.id}')">✏️</button></td>
+                <td class="actionCell"><button class="deleteBtn" onclick="deleteEntry('${row.id}')">🗑️</button></td>
             `;
             tbody.appendChild(tr);
         });
