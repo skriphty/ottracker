@@ -50,6 +50,9 @@
             margin: 0 auto;
         }
 
+        /* ------------------------------
+           MONTH TITLE + ARROWS
+        ------------------------------ */
         #monthTitle {
             text-align: center;
             font-size: 32px;
@@ -61,23 +64,26 @@
             align-items: center;
             gap: 25px;
         }
+
         #monthTitle button {
-            background: #1f4fd4;        /* same blue as Clock Out */
+            background: #1f4fd4;        /* Clock Out blue */
             color: white;
             border: none;
-            padding: 12px 22px;         /* bigger, more button-like */
-            font-size: 26px;
-            border-radius: 10px;        /* same rounded style */
+            padding: 18px 32px;
+            font-size: 32px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.25s ease;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #monthTitle button:hover {
-            background: #3a6af0;        /* same hover color as Clock Out */
-            transform: scale(1.08);     /* same hover animation */
+            background: #3a6af0;
+            transform: scale(1.10);
         }
-
 
         /* ------------------------------
            CALENDAR GRID
@@ -91,12 +97,11 @@
         .dayHeader {
             text-align: center;
             font-weight: bold;
-                padding: 10px 0;
+            padding: 10px 0;
             background: #1f1f1f;
             border-radius: 6px;
-            color: #1f4fd4; /* same blue as Clock Out button */
+            color: #1f4fd4; /* Clock Out blue */
         }
-
 
         .dayCell {
             background: #1e1e1e;
@@ -109,6 +114,12 @@
             justify-content: flex-start;
             align-items: flex-start;
             font-size: 18px;
+            cursor: pointer;
+            transition: 0.15s ease;
+        }
+
+        .dayCell:hover {
+            background: #252525;
         }
 
         .dayNumber {
@@ -122,6 +133,24 @@
             font-size: 18px;
             color: #e8d63a;
         }
+
+        /* ------------------------------
+           SELECTED DAY (blue highlight)
+        ------------------------------ */
+        .dayCell.selected {
+            background: #1f4fd4 !important;
+            border-color: #3a6af0 !important;
+            color: white !important;
+            transform: scale(1.03);
+        }
+
+        .dayCell.selected .dayNumber {
+            color: white !important;
+        }
+
+        .dayCell.selected .hoursText {
+            color: #ffe066 !important; /* yellow pop */
+        }
     </style>
 </head>
 <body>
@@ -133,14 +162,17 @@
 </div>
 
 <div id="calendarContainer">
+
+    <!-- MONTH TITLE + ARROWS -->
     <div id="monthTitle">
         <button id="prevMonthBtn">⟨</button>
         <span id="monthLabel">Loading…</span>
         <button id="nextMonthBtn">⟩</button>
     </div>
 
+    <!-- CALENDAR GRID -->
     <div id="calendarGrid">
-        <!-- Headers -->
+        <!-- Weekday headers (Monday start) -->
         <div class="dayHeader">Mon</div>
         <div class="dayHeader">Tue</div>
         <div class="dayHeader">Wed</div>
@@ -149,26 +181,65 @@
         <div class="dayHeader">Sat</div>
         <div class="dayHeader">Sun</div>
     </div>
+
 </div>
 
+<!-- TOTAL HOURS COUNTER -->
+<div id="selectedTotal"
+     style="text-align:center; font-size:26px; margin-top:25px; color:#e8d63a; font-weight:bold;">
+    Selected Hours: 0.00h
+</div>
 <script>
+/* ----------------------------------------
+   LOAD LOGS FROM LOCALSTORAGE
+---------------------------------------- */
 let logs = JSON.parse(localStorage.getItem("timeLogs") || "[]");
 
+/* ----------------------------------------
+   CURRENT VIEWED MONTH/YEAR
+---------------------------------------- */
 let viewYear = new Date().getFullYear();
 let viewMonth = new Date().getMonth(); // 0–11
 
+/* Track selected days */
+let selectedDays = new Set();
+
+/* Month names */
 const monthNames = [
     "January","February","March","April","May","June",
     "July","August","September","October","November","December"
 ];
 
+/* ----------------------------------------
+   UPDATE SELECTED TOTAL HOURS
+---------------------------------------- */
+function updateSelectedTotal(hoursByDay) {
+    let total = 0;
+
+    selectedDays.forEach(day => {
+        if (hoursByDay[day]) {
+            total += hoursByDay[day];
+        }
+    });
+
+    document.getElementById("selectedTotal").textContent =
+        "Selected Hours: " + total.toFixed(2) + "h";
+}
+
+/* ----------------------------------------
+   RENDER CALENDAR
+---------------------------------------- */
 function renderCalendar() {
     const monthLabel = document.getElementById("monthLabel");
     const grid = document.getElementById("calendarGrid");
 
     monthLabel.textContent = monthNames[viewMonth] + " " + viewYear;
 
-    // Clear old cells (keep headers)
+    /* Reset selection when switching months */
+    selectedDays.clear();
+    document.getElementById("selectedTotal").textContent = "Selected Hours: 0.00h";
+
+    /* Clear old cells (keep weekday headers) */
     grid.innerHTML = `
         <div class="dayHeader">Mon</div>
         <div class="dayHeader">Tue</div>
@@ -182,10 +253,12 @@ function renderCalendar() {
     const firstDay = new Date(viewYear, viewMonth, 1);
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
-    let startOffset = firstDay.getDay();
+    /* Monday-start offset */
+    let startOffset = firstDay.getDay(); // 0=Sun
     if (startOffset === 0) startOffset = 7;
     startOffset -= 1;
 
+    /* Sum hours per day */
     let hoursByDay = {};
 
     logs.forEach(entry => {
@@ -202,15 +275,18 @@ function renderCalendar() {
         }
     });
 
+    /* Add blank cells before day 1 */
     for (let i = 0; i < startOffset; i++) {
         const empty = document.createElement("div");
         empty.className = "dayCell";
         grid.appendChild(empty);
     }
 
+    /* Add actual days */
     for (let day = 1; day <= daysInMonth; day++) {
         const cell = document.createElement("div");
         cell.className = "dayCell";
+        cell.dataset.day = day;
 
         const num = document.createElement("div");
         num.className = "dayNumber";
@@ -224,10 +300,25 @@ function renderCalendar() {
             cell.appendChild(hrs);
         }
 
+        /* CLICK TO SELECT / DESELECT */
+        cell.onclick = () => {
+            if (selectedDays.has(day)) {
+                selectedDays.delete(day);
+                cell.classList.remove("selected");
+            } else {
+                selectedDays.add(day);
+                cell.classList.add("selected");
+            }
+            updateSelectedTotal(hoursByDay);
+        };
+
         grid.appendChild(cell);
     }
 }
 
+/* ----------------------------------------
+   MONTH SWITCHING
+---------------------------------------- */
 document.getElementById("prevMonthBtn").onclick = () => {
     viewMonth--;
     if (viewMonth < 0) {
@@ -246,6 +337,9 @@ document.getElementById("nextMonthBtn").onclick = () => {
     renderCalendar();
 };
 
+/* ----------------------------------------
+   INITIAL RENDER
+---------------------------------------- */
 renderCalendar();
 </script>
 
