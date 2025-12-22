@@ -62,15 +62,20 @@
             gap: 25px;
         }
         #monthTitle button {
-            background: none;
+            background: #1f4fd4;        /* same blue as Clock Out */
+            color: white;
             border: none;
-            color: #e0e0e0;
-            font-size: 28px;
+            padding: 12px 22px;         /* bigger, more button-like */
+            font-size: 26px;
+            border-radius: 10px;        /* same rounded style */
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.25s ease;
+            font-weight: bold;
         }
+
         #monthTitle button:hover {
-            color: #ffffff;
+            background: #3a6af0;        /* same hover color as Clock Out */
+            transform: scale(1.08);     /* same hover animation */
         }
 
 
