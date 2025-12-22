@@ -83,17 +83,11 @@
             transform: scale(0.95);
         }
 
-        /* Collapsible table container */
-        #tableContainer {
-            overflow: hidden;
-            max-height: 0;
-            transition: max-height 0.5s ease;
-        }
-
         /* Scrollable table */
         #scrollArea {
-            max-height: 350px;
+            max-height: 450px;
             overflow-y: auto;
+            margin-top: 25px;
         }
 
         table {
@@ -104,7 +98,7 @@
         }
 
         th, td {
-            padding: 14px;
+            padding: 8px;
             border: 1px solid #333;
             text-align: center;
         }
@@ -128,13 +122,25 @@
             transform: scale(1.2);
         }
 
+        /* Edit button */
+        .editBtn {
+            background: none;
+            border: none;
+            color: #55aaff;
+            font-size: 20px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: 0.2s;
+        }
+
+        .editBtn:hover {
+            color: #77bbff;
+            transform: scale(1.2);
+        }
+
         /* Alternating day colors */
-        .dayA {
-            background: #1a1a1a;
-        }
-        .dayB {
-            background: #222222;
-        }
+        .dayA { background: #1a1a1a; }
+        .dayB { background: #222222; }
 
         /* Action colors */
         .action-in {
@@ -146,7 +152,16 @@
             font-weight: bold;
         }
 
-        #toggleTableBtn, #downloadBtn {
+        /* Edited row animation */
+        .edited {
+            animation: glow 1.5s ease;
+        }
+        @keyframes glow {
+            0% { background-color: #444444; }
+            100% { background-color: inherit; }
+        }
+
+        #downloadBtn {
             display: block;
             margin: 25px auto;
             background: #2a2a2a;
@@ -156,8 +171,59 @@
             font-size: 18px;
         }
 
-        #toggleTableBtn:hover, #downloadBtn:hover {
+        #downloadBtn:hover {
             background: #3a3a3a;
+        }
+
+        /* Modal background */
+        #modalOverlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Modal box */
+        #editModal {
+            background: #1e1e1e;
+            padding: 25px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: center;
+            border: 1px solid #444;
+        }
+
+        #editModal input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #2a2a2a;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 6px;
+        }
+
+        #errorMsg {
+            color: #ff5555;
+            font-size: 14px;
+            min-height: 20px;
+        }
+
+        #saveEditBtn {
+            background: #27a327;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        #cancelEditBtn {
+            background: #555;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -167,42 +233,51 @@
 
 <h1>Time Tracker</h1>
 
-<div id="liveClock">--:--:--</div>
+<div id="liveClock">--:--</div>
 
 <div class="button-container">
     <button id="clockInBtn" onclick="record('Clock In')">Clock In</button>
     <button id="clockOutBtn" onclick="record('Clock Out')">Clock Out</button>
 </div>
 
-<button id="toggleTableBtn" onclick="toggleTable()">Show Today’s Log</button>
-
-<div id="tableContainer">
-    <div id="scrollArea">
-        <table id="logTable">
-            <thead>
-                <tr>
-                    <th>Action</th>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Delete</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
+<div id="scrollArea">
+    <table id="logTable">
+        <thead>
+            <tr>
+                <th>Action</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Edit</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 </div>
 
 <button id="downloadBtn" onclick="downloadCSV()">Download Spreadsheet</button>
 
+<!-- Modal -->
+<div id="modalOverlay">
+    <div id="editModal">
+        <h3>Edit Entry</h3>
+        <input id="editDate" placeholder="DD/MM/YYYY">
+        <input id="editTime" placeholder="HH:MM">
+        <div id="errorMsg"></div>
+        <button id="saveEditBtn" onclick="saveEdit()">Save</button>
+        <button id="cancelEditBtn" onclick="closeModal()">Cancel</button>
+    </div>
+</div>
+
 <script>
     let logs = JSON.parse(localStorage.getItem("timeLogs") || "[]");
-    let tableVisible = false;
+    let editingId = null;
 
     /* Live Clock */
     function updateClock() {
         const now = new Date();
         document.getElementById("liveClock").textContent =
-            now.toLocaleTimeString();
+            now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
     setInterval(updateClock, 1000);
     updateClock();
@@ -214,7 +289,7 @@
             id: crypto.randomUUID(),
             action: action,
             date: now.toLocaleDateString(),
-            time: now.toLocaleTimeString(),
+            time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             timestamp: now.getTime()
         };
 
@@ -225,28 +300,83 @@
         renderTable();
     }
 
+    /* Open modal */
+    function editEntry(id) {
+        editingId = id;
+        const entry = logs.find(r => r.id === id);
+
+        document.getElementById("editDate").value = entry.date;
+        document.getElementById("editTime").value = entry.time;
+        document.getElementById("errorMsg").textContent = "";
+
+        document.getElementById("modalOverlay").style.display = "flex";
+    }
+
+    /* Close modal */
+    function closeModal() {
+        document.getElementById("modalOverlay").style.display = "none";
+    }
+
+    /* Validate date/time */
+    function validate(date, time) {
+        const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+        const timeRegex = /^\d{2}:\d{2}$/;
+
+        if (!dateRegex.test(date)) return "Invalid date format";
+        if (!timeRegex.test(time)) return "Invalid time format";
+
+        return "";
+    }
+
+    /* Save edit */
+    function saveEdit() {
+        const date = document.getElementById("editDate").value;
+        const time = document.getElementById("editTime").value;
+
+        const error = validate(date, time);
+        if (error) {
+            document.getElementById("errorMsg").textContent = error;
+            return;
+        }
+
+        const entry = logs.find(r => r.id === editingId);
+        entry.date = date;
+        entry.time = time;
+
+        const dt = new Date(`${date} ${time}`);
+        entry.timestamp = dt.getTime();
+
+        logs.sort((a, b) => a.timestamp - b.timestamp);
+        localStorage.setItem("timeLogs", JSON.stringify(logs));
+
+        closeModal();
+        renderTable(true, editingId);
+    }
+
     /* Render table */
-    function renderTable() {
+    function renderTable(animate = false, editedId = null) {
         const tbody = document.querySelector("#logTable tbody");
         tbody.innerHTML = "";
-
-        const today = new Date().toLocaleDateString();
-        const filtered = tableVisible ? logs : logs.filter(r => r.date === today);
 
         let lastDate = "";
         let dayToggle = false;
 
-        filtered.forEach(row => {
+        logs.forEach(row => {
             if (row.date !== lastDate) dayToggle = !dayToggle;
             lastDate = row.date;
 
             const tr = document.createElement("tr");
             tr.className = dayToggle ? "dayA" : "dayB";
 
+            if (animate && row.id === editedId) {
+                tr.classList.add("edited");
+            }
+
             tr.innerHTML = `
                 <td class="${row.action === 'Clock In' ? 'action-in' : 'action-out'}">${row.action}</td>
                 <td>${row.date}</td>
                 <td>${row.time}</td>
+                <td><button class="editBtn" onclick="editEntry('${row.id}')">✏️</button></td>
                 <td><button class="deleteBtn" onclick="deleteEntry('${row.id}')">🗑️</button></td>
             `;
             tbody.appendChild(tr);
@@ -257,24 +387,6 @@
     function deleteEntry(id) {
         logs = logs.filter(row => row.id !== id);
         localStorage.setItem("timeLogs", JSON.stringify(logs));
-        renderTable();
-    }
-
-    /* Collapsible table */
-    function toggleTable() {
-        const container = document.getElementById("tableContainer");
-
-        if (tableVisible) {
-            container.style.maxHeight = "0";
-            document.getElementById("toggleTableBtn").textContent =
-                "Show Today’s Log";
-        } else {
-            container.style.maxHeight = "500px";
-            document.getElementById("toggleTableBtn").textContent =
-                "Hide Full Log";
-        }
-
-        tableVisible = !tableVisible;
         renderTable();
     }
 
