@@ -173,6 +173,19 @@
             box-shadow: 0 0 18px rgba(31,79,212,0.6);
         }
 
+        /* Month transition animations */
+        .fadeOut {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+
+        .fadeIn {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+        
     </style>
 </head>
 <body>
@@ -347,28 +360,51 @@ function renderCalendar() {
 /* ----------------------------------------
    MONTH SWITCHING
 ---------------------------------------- */
-document.getElementById("prevMonthBtn").onclick = () => {
-    viewMonth--;
-    if (viewMonth < 0) {
-        viewMonth = 11;
-        viewYear--;
-    }
-    renderCalendar();
-};
+        function animateMonthChange(callback) {
+            const grid = document.getElementById("calendarGrid");
 
-document.getElementById("nextMonthBtn").onclick = () => {
-    viewMonth++;
-    if (viewMonth > 11) {
-        viewMonth = 0;
-        viewYear++;
-    }
-    renderCalendar();
-};
+            // Fade out
+            grid.classList.remove("fadeIn");
+            grid.classList.add("fadeOut");
+
+            setTimeout(() => {
+                callback(); // change month + re-render
+
+                // Fade in
+                grid.classList.remove("fadeOut");
+                grid.classList.add("fadeIn");
+            }, 250);
+        }
+
+        document.getElementById("prevMonthBtn").onclick = () => {
+            animateMonthChange(() => {
+                viewMonth--;
+                if (viewMonth < 0) {
+                    viewMonth = 11;
+                    viewYear--;
+                }
+                renderCalendar();
+            });
+        };
+
+        document.getElementById("nextMonthBtn").onclick = () => {
+            animateMonthChange(() => {
+                viewMonth++;
+                if (viewMonth > 11) {
+                    viewMonth = 0;
+                    viewYear++;
+                }
+                renderCalendar();
+            });
+        };
 
 /* ----------------------------------------
    INITIAL RENDER
 ---------------------------------------- */
 renderCalendar();
+    grid.innerHTML = `
+    grid.classList.add("fadeIn");
+
 </script>
 
 </body>
