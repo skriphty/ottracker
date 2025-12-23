@@ -402,8 +402,18 @@ function renderCalendar() {
    INITIAL RENDER
 ---------------------------------------- */
 renderCalendar();
+    
     grid.innerHTML = `
-    grid.classList.add("fadeIn");
+    <div class="dayHeader">Mon</div>
+    <div class="dayHeader">Tue</div>
+    <div class="dayHeader">Wed</div>
+    <div class="dayHeader">Thu</div>
+    <div class="dayHeader">Fri</div>
+    <div class="dayHeader">Sat</div>
+    <div class="dayHeader">Sun</div>
+`;
+
+grid.classList.add("fadeIn");
 
 </script>
 
