@@ -169,61 +169,6 @@
             transform: scale(1.05);
         }
 
-/* ----------------------------------------------------
-   MOBILE LAYOUT — FIXED VERSION
----------------------------------------------------- */
-@media (max-width: 700px) {
-
-    body {
-        padding: 20px;
-    }
-
-    /* Make table full width */
-    table {
-        width: 100% !important;
-    }
-
-    /* Make button row match table width */
-    #buttonRow {
-        width: 100% !important;
-        max-width: 100% !important;
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 20px !important;
-        margin: 0 auto 25px auto !important;
-    }
-
-    /* Clock In / Out buttons — full width + bigger */
-    #clockInBtn,
-    #clockOutBtn {
-        width: 100% !important;
-        padding: 28px 0 !important;
-        font-size: 28px !important;
-        border-radius: 14px !important;
-        display: block !important;
-    }
-
-    /* KEEP fade‑to‑black disabled effect */
-    #clockInBtn:disabled,
-    #clockOutBtn:disabled {
-        opacity: 0.4 !important;
-        filter: grayscale(100%) brightness(60%) !important;
-    }
-
-    /* Reset + Download buttons back to corners */
-    #resetBtn {
-        position: absolute !important;
-        top: 20px !important;
-        left: 20px !important;
-    }
-
-    #downloadBtn {
-        position: absolute !important;
-        top: 20px !important;
-        right: 20px !important;
-    }
-}
-
     </style>
 </head>
 
