@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Time Log</title>
+    <title>Time Tracker</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
         body {
@@ -11,6 +10,11 @@
             padding: 40px;
             background: #121212;
             color: #e0e0e0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffffff;
         }
 
         /* ------------------------------
@@ -44,134 +48,250 @@
         }
 
         /* ------------------------------
-           BUTTONS
+           LIVE CLOCK + STATUS
         ------------------------------ */
-        #buttonRow {
+        #liveClock {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #b0b0b0;
+        }
+
+        #statusText {
+            text-align: center;
+            font-size: 22px;
+            margin-bottom: 20px;
+            color: #e8d63a;
+        }
+
+        /* ------------------------------
+           RESET + DOWNLOAD BUTTONS
+        ------------------------------ */
+        #resetBtn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 18px;
+            background: #2a2a2a;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        #resetBtn:hover {
+            background: #3a3a3a;
+        }
+
+        #downloadBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #2a2a2a;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        #downloadBtn:hover {
+            background: #3a3a3a;
+        }
+
+        /* ------------------------------
+           MAIN BUTTONS
+        ------------------------------ */
+        .button-container {
             display: flex;
             justify-content: center;
-            gap: 20px;
-            margin-bottom: 25px;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 30px 50px;
+            font-size: 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
         #clockInBtn {
             background: #d4c21f;
             color: black;
-            border: none;
-            padding: 18px 32px;
-            font-size: 22px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: 0.25s ease;
-            font-weight: bold;
         }
-
-        #clockInBtn:hover {
+        #clockInBtn:hover:not(.disabledBtn) {
             background: #e8d63a;
-            transform: scale(1.08);
+            transform: scale(1.05);
         }
 
         #clockOutBtn {
             background: #1f4fd4;
             color: white;
-            border: none;
-            padding: 18px 32px;
-            font-size: 22px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: 0.25s ease;
-            font-weight: bold;
+        }
+        #clockOutBtn:hover:not(.disabledBtn) {
+            background: #3a6af0;
+            transform: scale(1.05);
         }
 
-        #clockOutBtn:hover {
-            background: #3a6af0;
-            transform: scale(1.08);
+        .disabledBtn {
+            background: #000 !important;
+            color: #666 !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+            transform: none !important;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+        }
+        .tooltip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #000;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            white-space: nowrap;
+            opacity: 0.95;
+            pointer-events: none;
         }
 
         /* ------------------------------
            TABLE
         ------------------------------ */
+        #scrollArea {
+            max-height: 650px;
+            overflow-y: auto;
+            margin-top: 25px;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 25px;
             background: #1e1e1e;
-            border-radius: 10px;
-            overflow: hidden;
+            color: #e0e0e0;
+        }
+
+        th, td {
+            padding: 4px 6px;
+            border: 1px solid #333;
+            text-align: center;
         }
 
         th {
-            background: #2a2a2a;
-            padding: 14px;
-            text-align: left;
-            font-size: 18px;
-            color: #ffffff;
+            background: #272727;
         }
 
-        td {
-            padding: 14px;
-            border-bottom: 1px solid #333;
-            font-size: 17px;
+        td.actionCell {
+            width: 40px;
         }
 
-        tr:hover {
-            background: #252525;
+        /* Delete button */
+        .deleteBtn {
+            background: none;
+            border: none;
+            color: #ff5555;
+            font-size: 20px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .deleteBtn:hover {
+            color: #ff7777;
+            transform: scale(1.2);
+        }
+
+        /* Edit button */
+        .editBtn {
+            background: none;
+            border: none;
+            color: #55aaff;
+            font-size: 20px;
+            cursor: pointer;
+            margin-right: 5px;
+            transition: 0.2s;
+        }
+        .editBtn:hover {
+            color: #77bbff;
+            transform: scale(1.2);
+        }
+
+        /* Alternating day colors */
+        .dayA {
+            background: #1a1a1a;
+        }
+        .dayB {
+            background: #222222;
+        }
+
+        /* Action colors */
+        .action-in {
+            color: #e8d63a;
+            font-weight: bold;
+        }
+        .action-out {
+            color: #3a6af0;
+            font-weight: bold;
+        }
+
+        /* Edited row animation */
+        .edited {
+            animation: glow 1.5s ease;
+        }
+        @keyframes glow {
+            0% { background-color: #444; }
+            100% { background-color: inherit; }
         }
 
         /* ------------------------------
-           EDIT MODAL
+           MODAL
         ------------------------------ */
-        #editModal {
+        #modalOverlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.75);
+            background: rgba(0,0,0,0.7);
             display: none;
             justify-content: center;
             align-items: center;
         }
 
-        #editBox {
+        #editModal {
             background: #1e1e1e;
             padding: 25px;
-            border-radius: 12px;
-            width: 350px;
-            border: 2px solid #333;
-        }
-
-        #editBox input {
-            width: 100%;
-            padding: 10px;
-            margin-top: 12px;
-            background: #2a2a2a;
-            border: 1px solid #444;
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
-        }
-
-        #saveEditBtn {
-            margin-top: 18px;
-            width: 100%;
-            padding: 12px;
-            background: #1f4fd4;
-            color: white;
-            border: none;
             border-radius: 10px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: 0.25s ease;
+            width: 300px;
+            text-align: center;
+            border: 1px solid #444;
         }
 
-        #saveEditBtn:hover {
-            background: #3a6af0;
-            transform: scale(1.05);
+        #editModal input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #2a2a2a;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 6px;
         }
 
+        #errorMsg {
+            color: #ff5555;
+            font-size: 14px;
+            min-height: 20px;
+        }
     </style>
 </head>
-
 <body>
 
 <!-- TOP NAVIGATION MENU -->
